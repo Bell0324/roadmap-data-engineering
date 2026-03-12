@@ -62,11 +62,11 @@ with left_column:
         template='plotly_dark',
         labels={'nombre_limpio': 'Collaborator', 'monto': 'Total Amount ($)'}
     )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig_bar, width="stretch")
 
 with right_column:
     st.subheader("Data Preview (Structured Table)")
-    st.dataframe(df_selection, use_container_width=True)
+    st.dataframe(df_selection, width="stretch")
 
 # 6. Technical Footer / Pie de página técnico
 st.markdown("---")

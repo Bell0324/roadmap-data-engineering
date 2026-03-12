@@ -5,17 +5,25 @@ import plotly.express as px
 df = pd.read_csv('ventas_limpias.csv')
 
 # 2. Creamos una gráfica de barras interactiva
-fig = px.bar(df, 
-             x='nombre_limpio', 
-             y='monto', 
-             title='Visualización de Ventas: Reporte Diario',
-             color='monto', 
-             color_continuous_scale='Reds',
-             labels={'nombre_limpio': 'Vendedor', 'monto': 'Total Vendido ($)'},
-             template='plotly_dark')
+fig_bar = px.bar(
+        df,  # Cambiado de df_selection a df
+        x='nombre_limpio',
+        y='monto',
+        color='nombre_limpio', 
+        color_discrete_sequence=px.colors.qualitative.Pastel, 
+        template='plotly_dark',
+        title="<b>Sales Distribution by Team Member</b>",
+        labels={'nombre_limpio': 'Collaborator', 'monto': 'Total Revenue ($)'}
+    )
+
+# Esto quita la leyend de la derecha para que la gráfica tenga más espacio
+fig_bar.update_layout(showlegend=False)
 
 # 3. Guardamos la gráfica como una web interactiva
-fig.write_html("mi_reporte.html")
+# Cambiado de fig a fig_bar
+fig_bar.write_html("mi_reporte.html")
 
-print("🚀 ¡Gráfica generada con éxito! Revisa tu carpeta y abre 'mi_reporte.html'")
-fig.show()
+print("¡Gráfica generada con éxito! Revisa tu carpeta y abre 'mi_reporte.html'")
+
+# Mostramos la gráfica
+fig_bar.show()

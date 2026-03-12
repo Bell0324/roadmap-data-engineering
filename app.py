@@ -30,6 +30,23 @@ vendedor = st.sidebar.multiselect(
 # Filtering logic
 df_selection = df.query("nombre_limpio == @vendedor")
 
+# 5. Summary Metrics / Métricas de Resumen
+st.subheader("Key Performance Indicators")
+col1, col2 = st.columns(2)
+
+with col1:
+    total_sales = df_selection["monto"].sum()
+    st.metric(label="Total Sales Revenue ($)", value=f"${total_sales:,.2f}")
+
+with col2:
+    # Vamos a contar cuántas transacciones hay
+    total_transactions = len(df_selection)
+    st.metric(label="Number of Transactions", value=total_transactions)
+
+# Calculate Total Sales / Calcular Ventas Totales
+total_sales = df_selection["monto"].sum()
+
+
 # 5. Visualizations / Visualizaciones con Plotly
 # Column layout for a professional look
 left_column, right_column = st.columns(2)

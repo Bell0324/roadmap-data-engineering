@@ -1,5 +1,5 @@
-id_p,id_u,nombre_limpio,monto
-101,1,Bell,150.0
-102,2,Alex,85.5
-103,1,Bell,20.0
-104,3,Charlie,300.25
+id_p,id_u,nombre_limpio,monto,fecha
+101,1,Bell,150.0,2026-03-01
+102,2,Alex,85.5,2026-03-05
+103,1,Bell,20.0,2026-03-10
+104,3,Charlie,300.25,2026-03-12

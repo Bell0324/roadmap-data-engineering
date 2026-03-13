@@ -1,5 +1,5 @@
-id_p,id_u,nombre_sucio,monto
-101,1,  BELL  ,150.00
-102,2,alex,85.50
-103,1, Bell,20.00
-104,3,charlie ,300.25
+id_p,id_u,nombre_sucio,monto,fecha
+101,1,  BELL  ,150.00,2026-03-01
+102,2,alex,85.50,2026-03-05
+103,1, Bell,20.00,2026-03-10
+104,3,charlie ,300.25,2026-03-12

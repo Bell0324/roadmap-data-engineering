@@ -13,37 +13,55 @@ st.markdown("### Conexión Directa a Base de Datos SQL")
 # --- 3. CONEXIÓN A SQL ---
 engine = create_engine('sqlite:///mi_empresa.db')
 
-# Filtramos desde la base para ser más eficientes
+# Traemos los datos (SELECT inicial)
 query = "SELECT * FROM ventas WHERE monto > 10"
 df = pd.read_sql(query, engine)
 
 # --- ESCUDO CONTRA ERRORES (NaT) ---
-# 1. Convertimos a fecha, si algo falla lo marcamos como NaT (vacío)
 df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
-
-# 2. Borramos las filas que tengan la fecha vacía para que el calendario no falle
 df = df.dropna(subset=["fecha"])
 
-# 3. Si por alguna razón la tabla quedó vacía tras la limpieza, avisamos
 if df.empty:
     st.warning("⚠️ No hay datos que coincidan con los filtros de SQL.")
     st.stop()
 
-# --- 4. BARRA LATERAL ---
+# --- 4. BARRA LATERAL (Filtros y Formulario) ---
 st.sidebar.header("Opciones de Filtro")
 
-# Filtro de Vendedor
+# Filtro de Vendedor e Intervalo de Fecha
 vendedor = st.sidebar.multiselect(
     "Selecciona Colaborador:",
     options=df["nombre_limpio"].unique(),
     default=df["nombre_limpio"].unique()
 )
 
-# Filtro de Fecha (Ahora seguro porque ya no hay NaT)
 start_date = st.sidebar.date_input("Fecha Inicio", df["fecha"].min())
 end_date = st.sidebar.date_input("Fecha Fin", df["fecha"].max())
 
-# --- 5. LÓGICA DE FILTRADO ---
+# --- FORMULARIO PARA AGREGAR VENTAS (Escritura) ---
+st.sidebar.markdown("---")
+st.sidebar.header("➕ Añadir Nueva Venta")
+
+with st.sidebar.form("nueva_venta_form", clear_on_submit=True):
+    nuevo_vendedor = st.selectbox("Colaborador", options=df["nombre_limpio"].unique())
+    nuevo_monto = st.number_input("Monto ($)", min_value=0.0, step=10.0)
+    nueva_fecha = st.date_input("Fecha de Venta")
+    
+    submit_button = st.form_submit_button("Guardar Venta")
+
+if submit_button:
+    # Lógica para INSERTAR en SQL
+    nuevo_registro = pd.DataFrame({
+        'nombre_limpio': [nuevo_vendedor],
+        'monto': [nuevo_monto],
+        'fecha': [pd.to_datetime(nueva_fecha)]
+    })
+    # Guardamos en la BD
+    nuevo_registro.to_sql('ventas', con=engine, if_exists='append', index=False)
+    st.sidebar.success(f"✅ ¡Venta de {nuevo_vendedor} guardada!")
+    st.rerun() # Recargamos para que se vea en las gráficas y auditoría
+
+# --- 5. LÓGICA DE FILTRADO (Para las gráficas) ---
 df_selection = df.query(
     "nombre_limpio == @vendedor & fecha >= @start_date & fecha <= @end_date"
 )
@@ -51,7 +69,6 @@ df_selection = df.query(
 # --- 6. MÉTRICAS (KPIs) ---
 st.subheader("Indicadores Clave")
 col1, col2 = st.columns(2)
-
 total_sales = df_selection["monto"].sum()
 total_transactions = len(df_selection)
 
@@ -87,6 +104,18 @@ fig_line = px.line(
     color_discrete_sequence=['#00CC96']
 )
 st.plotly_chart(fig_line)
+
+# --- 9. AUDITORÍA: ÚLTIMAS VENTAS REGISTRADAS ---
+st.markdown("---")
+st.subheader("🕵️ Auditoría: Últimos Registros en Base de Datos")
+
+query_audit = "SELECT * FROM ventas ORDER BY rowid DESC LIMIT 5"
+df_audit = pd.read_sql(query_audit, engine)
+
+if not df_audit.empty:
+    st.table(df_audit)
+else:
+    st.write("Aún no hay registros recientes.")
 
 # --- CIERRE ---
 st.markdown("---")

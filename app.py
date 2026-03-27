@@ -9,7 +9,6 @@ st.set_page_config(page_title="Sales Dashboard 2026", layout="wide")
 # --- 2. CONEXIÓN Y LÓGICA DE DATOS (ETL) ---
 engine = create_engine('sqlite:///mi_empresa.db')
 
-# 💡 MEJORA: Añadimos caché para que la app vuele ⚡
 @st.cache_data
 def load_and_clean_data(_engine):
     query = """
@@ -19,14 +18,18 @@ def load_and_clean_data(_engine):
     WHERE v.monto > 0
     """
     data = pd.read_sql(query, _engine)
+    
+    # 💡 CORRECCIÓN CRÍTICA: Convertimos a datetime y luego a DATE puro
+    # Esto asegura que el filtro de la línea 68 funcione correctamente.
     data["fecha"] = pd.to_datetime(data["fecha"], errors='coerce').dt.date
+    
+    # Eliminamos filas sin fecha si las hubiera
     data = data.dropna(subset=["fecha"])
+    
     return data
 
+# Cargamos los datos
 df = load_and_clean_data(engine)
-
-st.write("Tipos de datos detectados:", df.dtypes)
-st.write("Ejemplo de fecha en el DataFrame:", df['fecha'].iloc[0])
 
 if df.empty:
     st.warning("⚠️ No se encontraron datos válidos.")
@@ -61,41 +64,60 @@ if submit_button:
     })
     nuevo_registro.to_sql('ventas', con=engine, if_exists='append', index=False)
     
-    # 💡 MEJORA: Limpiamos la caché para que las gráficas se actualicen
+    # Limpiamos caché para actualizar gráficas
     st.cache_data.clear()
     
     st.sidebar.success(f"✅ Registro exitoso: {nuevo_vendedor}")
     st.rerun()
 
-# --- 4. FILTRADO Y VISUALIZACIÓN ---
-df_selection = df.query("nombre_limpio == @vendedor & fecha >= @start_date & fecha <= @end_date")
+# --- 4. FILTRADO FINAL ---
+# Ahora que df['fecha'] y start_date son del mismo tipo, esto funcionará:
+df_selection = df.query(
+    "nombre_limpio == @vendedor & fecha >= @start_date & fecha <= @end_date"
+)
 
+# --- 5. VISUALIZACIÓN DE MÉTRICAS (KPIs) ---
 st.title("📊 Sales Intelligence Dashboard")
 st.markdown("### Análisis de Desempeño y Auditoría Relacional")
 
-# KPIs
 m_col1, m_col2, m_col3 = st.columns(3)
-m_col1.metric("Ingresos Totales", f"${df_selection['monto'].sum():,.2f}")
-m_col2.metric("Transacciones", len(df_selection))
-promedio = df_selection['monto'].mean() if not df_selection.empty else 0
-m_col3.metric("Promedio de Venta", f"${promedio:,.2f}")
+with m_col1:
+    st.metric("Ingresos Totales", f"${df_selection['monto'].sum():,.2f}")
+with m_col2:
+    st.metric("Transacciones", len(df_selection))
+with m_col3:
+    promedio = df_selection['monto'].mean() if not df_selection.empty else 0
+    st.metric("Promedio de Venta", f"${promedio:,.2f}")
 
-# Gráficas
+# --- 6. GRÁFICAS PRINCIPALES ---
 st.markdown("---")
 g_col1, g_col2 = st.columns(2)
 
 with g_col1:
     st.subheader("Ventas por Colaborador")
-    st.plotly_chart(px.bar(df_selection, x='nombre_limpio', y='monto', color='monto', template='plotly_dark'), use_container_width=True)
+    fig_bar = px.bar(
+        df_selection, x='nombre_limpio', y='monto', color='monto',
+        color_continuous_scale='Viridis', template='plotly_dark'
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
 
 with g_col2:
     st.subheader("Distribución por Sucursal")
     df_suc = df_selection.groupby("sucursal")["monto"].sum().reset_index()
-    st.plotly_chart(px.pie(df_suc, values='monto', names='sucursal', hole=0.4, template='plotly_dark'), use_container_width=True)
+    fig_pie = px.pie(df_suc, values='monto', names='sucursal', hole=0.4, template='plotly_dark')
+    st.plotly_chart(fig_pie, use_container_width=True)
 
-# Auditoría
+# --- 7. TENDENCIA Y AUDITORÍA ---
+st.markdown("---")
+st.subheader("📈 Tendencia Temporal")
+df_trend = df_selection.groupby('fecha')['monto'].sum().reset_index()
+fig_line = px.line(df_trend, x='fecha', y='monto', markers=True, template='plotly_dark')
+st.plotly_chart(fig_line, use_container_width=True)
+
 st.markdown("---")
 with st.expander("🕵️ Ver Auditoría de los Últimos 5 Registros"):
-    st.table(pd.read_sql("SELECT * FROM ventas ORDER BY rowid DESC LIMIT 5", engine))
+    query_audit = "SELECT * FROM ventas ORDER BY rowid DESC LIMIT 5"
+    st.table(pd.read_sql(query_audit, engine))
 
-st.caption("© 2026 Belén Abigail Acuña | Pipeline AI-Ready")
+st.markdown("---")
+st.caption(f"© 2026 Belén Abigail Acuña | Ingeniería de Sistemas | Pipeline AI-Ready")

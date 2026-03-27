@@ -25,6 +25,9 @@ def load_and_clean_data(_engine):
 
 df = load_and_clean_data(engine)
 
+st.write("Tipos de datos detectados:", df.dtypes)
+st.write("Ejemplo de fecha en el DataFrame:", df['fecha'].iloc[0])
+
 if df.empty:
     st.warning("⚠️ No se encontraron datos válidos.")
     st.stop()
